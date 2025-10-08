@@ -41,6 +41,9 @@ class Config:
         allowed_subnets_str = os.getenv('ALLOWED_SUBNETS', '')
         self.allowed_subnets = [s.strip() for s in allowed_subnets_str.split(',') if s.strip()]
 
+        excluded_subnets_str = os.getenv('EXCLUDED_SUBNETS', '')
+        self.excluded_subnets = [s.strip() for s in excluded_subnets_str.split(',') if s.strip()]
+
         self.log_file = os.getenv('LOG_FILE', '/var/log/unipiSync.log')
         self.log_level = os.getenv('LOG_LEVEL', 'INFO')
 
@@ -67,6 +70,7 @@ class UnifiController:
         self.api_token = config.unifi_api_token
         self.site = config.unifi_site
         self.allowed_subnets = config.allowed_subnets
+        self.excluded_subnets = config.excluded_subnets
         self.session = requests.Session()
         self.session.verify = False
         self.session.headers.update({'X-API-KEY': self.api_token})
@@ -87,6 +91,11 @@ class UnifiController:
                 if not ip or not hostname:
                     continue
 
+                # Filter by excluded subnets first (takes precedence)
+                if self.excluded_subnets:
+                    if any(ip.startswith(subnet) for subnet in self.excluded_subnets):
+                        continue
+
                 # Filter by allowed subnets if configured
                 if self.allowed_subnets:
                     if not any(ip.startswith(subnet) for subnet in self.allowed_subnets):
@@ -101,8 +110,15 @@ class UnifiController:
             # Handle duplicate hostnames
             active_clients = self._handle_duplicates(client_list)
 
-            subnet_msg = f" in subnets {', '.join(self.allowed_subnets)}" if self.allowed_subnets else ""
-            logging.info(f"Found {len(active_clients)} active clients{subnet_msg}")
+            # Build descriptive log message
+            filter_parts = []
+            if self.allowed_subnets:
+                filter_parts.append(f"in subnets {', '.join(self.allowed_subnets)}")
+            if self.excluded_subnets:
+                filter_parts.append(f"excluding {', '.join(self.excluded_subnets)}")
+
+            filter_msg = f" ({', '.join(filter_parts)})" if filter_parts else " (all subnets)"
+            logging.info(f"Found {len(active_clients)} active clients{filter_msg}")
             return active_clients
         except Exception as e:
             logging.error(f"Failed to get active clients from Unifi: {e}")

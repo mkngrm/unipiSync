@@ -9,7 +9,6 @@ Syncs DHCP lease information from Unifi Controller to Pi-hole DNS records.
 - Sanitizes hostnames for DNS compatibility
 - Handles duplicate hostnames by appending IP last octet
 - Creates or updates DNS records in Pi-hole
-- Logs all operations
 
 ## Requirements
 
@@ -38,7 +37,7 @@ cp config.env.example config.env
 
 4. Edit `config.env` with your settings:
 ```bash
-nano config.env
+vi config.env
 ```
 
 ## Configuration
@@ -97,7 +96,7 @@ sudo crontab -e
 
 Add line (runs every 5 minutes):
 ```
-*/5 * * * * cd /path/to/unipiSync && /usr/bin/python3 sync.py >> /var/log/unipisync.log 2>&1
+*/5 * * * * /usr/bin/python3 sync.py >> /var/log/unipisync.log 2>&1
 ```
 
 ## Hostname Sanitization

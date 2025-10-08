@@ -179,4 +179,4 @@ If multiple clients have the same hostname after sanitization, the IP's last oct
 
 ## License
 
-MIT
+MIT - See [LICENSE](LICENSE) file for details

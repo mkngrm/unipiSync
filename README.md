@@ -61,29 +61,29 @@ Edit `config.env` with the following values:
 - `ALLOWED_SUBNETS` - Comma-separated list of subnet prefixes to sync (e.g., 192.168.70. or 192.168.10.,192.168.20.)
 
 ### Logging
-- `LOG_FILE` - Path to log file (default: /var/log/unipisync.log)
+- `LOG_FILE` - Path to log file (default: /var/log/unipiSync.log)
 - `LOG_LEVEL` - Logging level: DEBUG, INFO, WARNING, ERROR (default: INFO)
 
 ## Usage
 
 ### Test with dry run:
 ```bash
-./sync.py --dry-run
+./unipiSync.py --dry-run
 ```
 
 ### Run sync:
 ```bash
-./sync.py
+./unipiSync.py
 ```
 
 ### Custom config file:
 ```bash
-./sync.py -c /path/to/config.env
+./unipiSync.py -c /path/to/config.env
 ```
 
 ### Verbose logging:
 ```bash
-./sync.py -v
+./unipiSync.py -v
 ```
 
 ## Automation
@@ -96,7 +96,7 @@ sudo crontab -e
 
 Add line (runs every 5 minutes):
 ```
-*/5 * * * * /usr/bin/python3 sync.py >> /var/log/unipisync.log 2>&1
+*/5 * * * * /usr/bin/python3 unipiSync.py >> /var/log/unipiSync.log 2>&1
 ```
 
 ## Hostname Sanitization

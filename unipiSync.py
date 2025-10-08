@@ -41,7 +41,7 @@ class Config:
         allowed_subnets_str = os.getenv('ALLOWED_SUBNETS', '')
         self.allowed_subnets = [s.strip() for s in allowed_subnets_str.split(',') if s.strip()]
 
-        self.log_file = os.getenv('LOG_FILE', '/var/log/unipisync.log')
+        self.log_file = os.getenv('LOG_FILE', '/var/log/unipiSync.log')
         self.log_level = os.getenv('LOG_LEVEL', 'INFO')
 
         self.validate()

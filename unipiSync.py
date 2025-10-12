@@ -11,7 +11,7 @@ import argparse
 import sys
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from urllib.parse import quote
 from collections import Counter
 from dotenv import load_dotenv
@@ -281,7 +281,7 @@ class StateManager:
             with open(self.state_file, 'w') as f:
                 data = {
                     'devices': self.devices,
-                    'last_updated': datetime.now(datetime.UTC).isoformat()
+                    'last_updated': datetime.now(timezone.utc).isoformat()
                 }
                 json.dump(data, f, indent=2)
             logging.debug(f"Saved {len(self.devices)} managed devices to state file")
@@ -294,7 +294,7 @@ class StateManager:
             'fqdn': fqdn,
             'ip': ip,
             'hostname': hostname,
-            'last_seen': datetime.now(datetime.UTC).isoformat()
+            'last_seen': datetime.now(timezone.utc).isoformat()
         }
 
     def get_device(self, mac):

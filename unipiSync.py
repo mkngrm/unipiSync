@@ -281,7 +281,7 @@ class StateManager:
             with open(self.state_file, 'w') as f:
                 data = {
                     'devices': self.devices,
-                    'last_updated': datetime.utcnow().isoformat()
+                    'last_updated': datetime.now(datetime.UTC).isoformat()
                 }
                 json.dump(data, f, indent=2)
             logging.debug(f"Saved {len(self.devices)} managed devices to state file")
@@ -294,7 +294,7 @@ class StateManager:
             'fqdn': fqdn,
             'ip': ip,
             'hostname': hostname,
-            'last_seen': datetime.utcnow().isoformat()
+            'last_seen': datetime.now(datetime.UTC).isoformat()
         }
 
     def get_device(self, mac):

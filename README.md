@@ -148,7 +148,7 @@ crontab -e
 
 Add line to run every 5 minutes:
 ```
-*/5 * * * * cd /path/to/unipiSync && /usr/bin/python3 unipiSync.py >> /var/log/unipiSync.log 2>&1
+*/5 * * * * cd /path/to/unipiSync && /usr/bin/python3 unipiSync.py
 ```
 
 ### Option 2: Root crontab (for system-wide deployment)
@@ -158,8 +158,10 @@ sudo crontab -e
 
 Add line:
 ```
-*/5 * * * * cd /opt/unipiSync && /usr/bin/python3 unipiSync.py >> /var/log/unipiSync.log 2>&1
+*/5 * * * * cd /opt/unipiSync && /usr/bin/python3 unipiSync.py
 ```
+
+**Note:** Do not redirect stdout/stderr to the log file in the cron job (e.g., `>> /var/log/unipiSync.log 2>&1`). The script already handles logging internally via the `LOG_FILE` configuration option, and redirecting output will cause duplicate log entries.
 
 **Cron schedule examples:**
 - Every 5 minutes: `*/5 * * * *`

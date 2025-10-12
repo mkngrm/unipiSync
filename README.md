@@ -5,10 +5,13 @@ Syncs DHCP lease information from Unifi Controller to Pi-hole DNS records.
 ## What it does
 
 - Retrieves active DHCP clients from Unifi Controller
+- Tracks devices by MAC address for reliable identification across IP/hostname changes
 - Filters clients by subnet (include/exclude rules)
 - Sanitizes hostnames for DNS compatibility
 - Handles duplicate hostnames by appending IP last octet
 - Creates or updates DNS records in Pi-hole via API
+- Automatically cleans up stale DNS records when devices change IP or hostname
+- Protects manually created DNS records from deletion
 - Supports dry-run mode to preview changes before applying
 
 ## Requirements
@@ -95,6 +98,14 @@ Controls which DHCP clients are synced to Pi-hole based on IP address prefixes.
   - Options: `DEBUG`, `INFO`, `WARNING`, `ERROR`
   - Use `DEBUG` for troubleshooting
 
+### State Management
+- `STATE_FILE` - Path to state file that tracks unipiSync-managed devices (default: `/var/lib/unipiSync/state.json`)
+  - Stores MAC addresses and associated DNS records
+  - Used to distinguish unipiSync-created records from manual DNS entries
+  - **Important:** unipiSync will ONLY delete records it has created (tracked in this file)
+  - Manual DNS records in Pi-hole are never touched
+  - Automatically created on first run
+
 ## Usage
 
 ### Test with dry run (recommended first):
@@ -156,7 +167,44 @@ Add line:
 - Every hour: `0 * * * *`
 - Every day at 3am: `0 3 * * *`
 
-## Hostname Sanitization
+## How It Works
+
+### MAC Address Tracking
+unipiSync tracks devices by MAC address (the most reliable identifier) rather than just IP or hostname:
+
+**Why MAC addresses?**
+- **IP addresses change** - DHCP leases expire and devices get new IPs
+- **Hostnames change** - Containers/VMs can be renamed
+- **MAC addresses are stable** - They persist across reboots and DHCP renewals
+- **Handles Apple devices** - Even with MAC randomization, each random MAC is tracked separately
+
+**What happens when devices change:**
+- **IP change:** Old DNS record is deleted, new one created with the new IP
+- **Hostname change:** Old DNS record is deleted, new one created with the new hostname
+- **MAC change:** Treated as a new device (rare, usually only when manually changed)
+
+### State Management
+unipiSync maintains a state file (`/var/lib/unipiSync/state.json`) that tracks:
+```json
+{
+  "devices": {
+    "aa:bb:cc:dd:ee:ff": {
+      "fqdn": "server.example.com",
+      "ip": "192.168.70.100",
+      "hostname": "server",
+      "last_seen": "2025-10-12T05:57:50Z"
+    }
+  }
+}
+```
+
+**State file purpose:**
+- Tracks which DNS records were created by unipiSync
+- Prevents deletion of manually created DNS records
+- Enables cleanup of stale records when devices change
+- First run considers all existing records as "manual" (won't delete anything)
+
+### Hostname Sanitization
 
 Hostnames from Unifi are automatically cleaned for DNS compatibility:
 
@@ -176,6 +224,29 @@ If multiple clients have the same hostname after sanitization, the IP's last oct
 - First device: `laptop.example.com` (192.168.70.101)
 - Second device: `laptop-102.example.com` (192.168.70.102)
 - Third device: `laptop-103.example.com` (192.168.70.103)
+
+## Common Use Cases
+
+### Homelab LXC/VM Management
+Sync only your LXC containers or VMs (e.g., in a dedicated VLAN):
+```bash
+ALLOWED_SUBNETS=192.168.70.
+```
+- Automatically creates DNS records for new containers
+- Updates DNS when containers are moved/renamed
+- Cleans up DNS when containers are deleted
+- Leaves your manually created infrastructure DNS records alone
+
+### Apple Device MAC Randomization
+Apple devices use randomized MAC addresses for privacy. unipiSync handles this:
+- Each random MAC is tracked separately
+- Creates DNS records like `iphone-42.example.com`, `iphone-135.example.com`
+- Automatically cleans up old entries when the device gets a new random MAC
+
+### Mixed Manual + Automatic DNS
+- **Manual records:** Create static DNS entries in Pi-hole for servers, infrastructure
+- **Automatic records:** Let unipiSync manage DHCP clients in specific subnets
+- unipiSync will only delete records it created, never your manual ones
 
 ## License
 

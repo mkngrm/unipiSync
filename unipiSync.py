@@ -51,6 +51,13 @@ class Config:
         # State file to track unipiSync-managed records
         self.state_file = os.getenv('STATE_FILE', '/var/lib/unipiSync/state.json')
 
+        # Ntfy notification settings
+        self.ntfy_enabled = os.getenv('NTFY_ENABLED', 'false').lower() in ('true', '1', 'yes')
+        self.ntfy_host = os.getenv('NTFY_HOST', 'https://ntfy.sh')
+        self.ntfy_topic = os.getenv('NTFY_TOPIC', 'unipisync')
+        self.ntfy_token = os.getenv('NTFY_TOKEN', '')
+        self.ntfy_priority = os.getenv('NTFY_PRIORITY', 'default')
+
         self.validate()
 
     def validate(self):
@@ -329,6 +336,48 @@ class StateManager:
 
         return old_records
 
+class NtfyNotifier:
+    """Sends notifications to ntfy server"""
+    def __init__(self, config):
+        self.enabled = config.ntfy_enabled
+        self.host = config.ntfy_host.rstrip('/')
+        self.topic = config.ntfy_topic
+        self.token = config.ntfy_token
+        self.priority = config.ntfy_priority
+        self.session = requests.Session()
+
+    def send(self, title, message, tags=None, priority=None):
+        """Send notification to ntfy"""
+        if not self.enabled:
+            return True
+
+        try:
+            url = f"{self.host}/{self.topic}"
+            headers = {
+                'Title': title,
+                'Priority': priority or self.priority,
+            }
+
+            if self.token:
+                headers['Authorization'] = f'Bearer {self.token}'
+
+            if tags:
+                headers['Tags'] = ','.join(tags)
+
+            response = self.session.post(url, data=message.encode('utf-8'), headers=headers, timeout=10)
+            response.raise_for_status()
+            logging.debug(f"Notification sent: {title}")
+            return True
+        except Exception as e:
+            logging.warning(f"Failed to send ntfy notification: {e}")
+            return False
+
+    def notify_new_device(self, fqdn, ip, mac):
+        """Send notification for new DNS record"""
+        title = "🆕 New DNS Record"
+        message = f"Device: {fqdn}\nIP: {ip}\nMAC: {mac}"
+        self.send(title, message, tags=['new', 'dns'])
+
 def sync_dhcp_to_dns(config, dry_run=False):
     """Main sync function"""
     logging.info("=" * 50)
@@ -336,6 +385,9 @@ def sync_dhcp_to_dns(config, dry_run=False):
 
     # Load state manager
     state = StateManager(config.state_file)
+
+    # Initialize notifier
+    notifier = NtfyNotifier(config)
 
     # Get active clients from Unifi
     unifi = UnifiController(config)
@@ -435,6 +487,7 @@ def sync_dhcp_to_dns(config, dry_run=False):
                 if pihole.add_dns_record(client['hostname'], ip):
                     logging.info(f"Added {fqdn} -> {ip} (MAC: {mac})")
                     state.update_device(mac, fqdn, ip, client['hostname'])
+                    notifier.notify_new_device(fqdn, ip, mac)
                     added += 1
                 else:
                     failed += 1

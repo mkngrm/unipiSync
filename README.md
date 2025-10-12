@@ -106,6 +106,38 @@ Controls which DHCP clients are synced to Pi-hole based on IP address prefixes.
   - Manual DNS records in Pi-hole are never touched
   - Automatically created on first run
 
+### Notifications (Optional)
+unipiSync can send push notifications via ntfy when new DNS records are created.
+
+- `NTFY_ENABLED` - Enable or disable ntfy notifications (default: `false`)
+  - Set to `true`, `1`, or `yes` to enable
+- `NTFY_HOST` - ntfy server URL (required if notifications enabled)
+  - Self-hosted: `http://192.168.1.100:8080` or `https://ntfy.yourdomain.com`
+  - Public service: `https://ntfy.sh`
+- `NTFY_TOPIC` - Topic name for notifications (required if notifications enabled)
+  - Example: `unipisync-alerts`, `homelab-dns`, etc.
+  - Must be unique if using public ntfy.sh service
+- `NTFY_TOKEN` - Authentication token (optional)
+  - Only needed for protected/private topics
+  - Leave empty for public topics
+  - Generate in ntfy web UI or via ntfy CLI
+- `NTFY_PRIORITY` - Notification priority (default: `default`)
+  - Options: `min`, `low`, `default`, `high`, `urgent`
+
+**Example configuration:**
+```bash
+NTFY_ENABLED=true
+NTFY_HOST=https://ntfy.sh
+NTFY_TOPIC=homelab-unipisync
+NTFY_TOKEN=tk_abc123...
+NTFY_PRIORITY=default
+```
+
+**What gets notified:**
+- New DNS records created for devices joining the network for the first time
+- Notifications include device FQDN, IP address, and MAC address
+- Updates to existing records do not trigger notifications (only new additions)
+
 ## Usage
 
 ### Test with dry run (recommended first):
